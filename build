@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash -eu
 # Copyright 2015 the Massachusetts Institute of Technology
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may not
@@ -13,4 +13,14 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-exec urweb -dbms sqlite -db "dbname=urwiki.sqlite3" -output urwiki urwiki
+if [[ 1 < $# ]]; then
+    echo "usage: $0 [fresh]" >&2
+    exit 1
+fi
+
+urweb -dbms sqlite -db "dbname=urwiki.sqlite3" -sql initialize.sql -output urwiki urwiki
+
+if [[ $# == 1 && $1 == "fresh" ]]; then
+    rm urwiki.sqlite3
+    sqlite3 urwiki.sqlite3 <initialize.sql
+fi

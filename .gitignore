@@ -1,0 +1,13 @@
+#                                                                   -*- conf -*-
+
+# Editor backup files
+*~
+\#*
+.\#*
+
+# Ur
+urwiki
+*.sql
+
+# SQLite
+*.sqlite3

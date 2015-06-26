@@ -55,6 +55,10 @@ fun create_commit title text : transaction unit =
   dml (INSERT INTO commit (Id, Created, Title, Content)
        VALUES ({[id]}, {[creation_time]}, {[title]}, {[text]}))
 
+style article_text
+style button_group
+style top_bar
+
 fun wiki requested_article_title =
   (* Look up the article. *)
   article <- current_revision requested_article_title;
@@ -72,46 +76,47 @@ fun wiki requested_article_title =
             then Configuration.wiki_title
             else article.Title ^ " – " ^ Configuration.wiki_title]}
         </title>
-        <link rel="stylesheet" href="/urwiki.css" />
+        <link rel="stylesheet" href="/css/normalize.css" />
+        <link rel="stylesheet" href="/css/urwiki.css" />
       </head>
       <body>
         (* Page headings *)
-        <div>
-          <h1>{[Configuration.wiki_title]}</h1>
-          <ul>
-            <li>
-              <a link={wiki Configuration.main_page_name}>
-                {[Configuration.main_page_name]}
-              </a>
-            </li>
-          </ul>
-        </div>
-        (* Article *)
-        <dyn signal={text <- signal article_body_source;
-                     return <xml>{[text]}</xml>} /><br />
-        (* Editing panel *)
-        <div>
-          (* Controls for View mode *)
-          <div dynClass={only_in page_mode View}>
-            <button
-               value="Edit"
-               onclick={fn _ =>
+        <div class={top_bar}>
+          <a link={wiki Configuration.main_page_name}>
+            {[Configuration.wiki_title]}
+          </a>
+          <div class={button_group}>
+            (* Controls for View mode *)
+            <div dynClass={only_in page_mode View}>
+              <button
+                 value="Edit"
+                 onclick={fn _ =>
                           lock_result <- rpc (Lock.take article.Title);
                           if lock_result
                             then set page_mode Edit
                             else return ()} />
+            </div>
+            (* Controls for Edit mode *)
+            <div dynClass={only_in page_mode Edit}>
+              <button
+                 value="Commit"
+                 onclick={fn _ =>
+                            text <- get article_body_source;
+                            rpc (create_commit article.Title text);
+                            rpc (Lock.release article.Title);
+                            set page_mode View} />
+            </div>
           </div>
-          (* Controls for Edit mode *)
+        </div>
+        (* Article *)
+        <div class={article_text}>
+          (* Editing window *)
           <div dynClass={only_in page_mode Edit}>
             <ctextarea source={article_body_source} /><br />
-            <button
-               value="Commit"
-               onclick={fn _ =>
-                          text <- get article_body_source;
-                          rpc (create_commit article.Title text);
-                          rpc (Lock.release article.Title);
-                          set page_mode View} />
           </div>
+          (* Article text (or live preview) *)
+          <dyn signal={text <- signal article_body_source;
+                       return <xml>{[text]}</xml>} />
         </div>
       </body>
     </xml>

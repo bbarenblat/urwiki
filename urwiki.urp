@@ -1,5 +1,6 @@
-allow url /urwiki.css
-file /urwiki.css urwiki.css
+allow url /css/*
+file /css/normalize.css normalize.css
+file /css/urwiki.css urwiki.css
 
 $/option
 style

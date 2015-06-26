@@ -90,7 +90,7 @@ div {
     height: 45px;
 }
 
-.Main_article_text {
+.Main_content {
     margin: 0 auto;
     padding: 0 15px;
     max-width: 62.5em;
@@ -101,6 +101,12 @@ div {
     height: 12em;
     margin-bottom: 1em;
     resize: vertical;
+}
+
+.Main_footer {
+    margin-top: 3em;
+    font-size: 0.8em;
+    color: #888;
 }
 
 .Style_invisible {

@@ -45,9 +45,10 @@ fun current_revision title =
                       WHERE commit.Title = {[title]}
                       ORDER BY commit.Created ASC);
   return (case commits of
-              Nil => {Title = title, Body = "Not found."}
+              Nil => {Title = title, Body = "Not found.", Modified = None}
             | art :: _ => {Title = art.Title,
-                           Body = show art.Content})
+                           Body = show art.Content,
+                           Modified = Some art.Created})
 
 fun create_commit title text : transaction unit =
   id <- nextval commit_id_next;
@@ -55,16 +56,24 @@ fun create_commit title text : transaction unit =
   dml (INSERT INTO commit (Id, Created, Title, Content)
        VALUES ({[id]}, {[creation_time]}, {[title]}, {[text]}))
 
-style article_text
+fun report_last_modified date =
+  <xml>
+    This page was last modified at
+    {[timef "%l:%M:%S %P %Z on %A, %e %B %Y" date]}.
+  </xml>
+
+style content
+style footer
 style button_group
 style top_bar
 
 fun wiki requested_article_title =
   (* Look up the article. *)
   article <- current_revision requested_article_title;
-  (* Stuff the article text in a source so we can live-update it as the user
-  edits. *)
+  (* Stuff article information into sources so we can live-update them as the
+  user edits. *)
   article_body_source <- source article.Body;
+  article_modified_source <- source article.Modified;
   (* Initially, we're in View mode, and we can switch to Edit mode on user
   request. *)
   page_mode <- source View;
@@ -115,7 +124,7 @@ fun wiki requested_article_title =
           </div>
         </div>
         (* Article *)
-        <div class={article_text}>
+        <div class={content}>
           (* Editing window *)
           <div dynClass={only_in page_mode Edit}>
             <ctextarea source={article_body_source} /><br />
@@ -123,6 +132,12 @@ fun wiki requested_article_title =
           (* Article text (or live preview) *)
           <dyn signal={text <- signal article_body_source;
                        return <xml>{[text]}</xml>} />
+          <div class={footer}>
+            <dyn signal={modified <- signal article_modified_source;
+                         return (case article.Modified of
+                                     None => <xml></xml>
+                                   | Some date => report_last_modified date)} />
+          </div>
         </div>
       </body>
     </xml>

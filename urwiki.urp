@@ -1,5 +1,7 @@
 allow url /urwiki.css
 file /urwiki.css urwiki.css
 
+$/option
 style
+lock
 main

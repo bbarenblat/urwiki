@@ -105,6 +105,12 @@ fun wiki requested_article_title =
                             rpc (create_commit article.Title text);
                             rpc (Lock.release article.Title);
                             set page_mode View} />
+              <button
+                 value="Revert"
+                 onclick={fn _ =>
+                            set article_body_source article.Body;
+                            rpc (Lock.release article.Title);
+                            set page_mode View} />
             </div>
           </div>
         </div>

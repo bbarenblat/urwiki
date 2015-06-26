@@ -30,6 +30,20 @@ table article : { Title : string,
   CONSTRAINT Head
     FOREIGN KEY Head REFERENCES commit(Id)
 
+datatype mode = View | Edit
+val eq_mode =
+  mkEq (fn x y =>
+          case (x, y) of
+              (View, View) => True
+            | (Edit, Edit) => True
+            | _ => False)
+
+fun only_in mode_source target_mode =
+  current_mode <- signal mode_source;
+  return (if current_mode = target_mode
+          then null
+          else Style.invisible)
+
 fun commit_article title text : transaction unit =
   id <- nextval commit_id_next;
   creation_time <- now;
@@ -49,6 +63,7 @@ fun commit_article title text : transaction unit =
              WHERE Title = {[title]})
 
 fun wiki requested_article_title =
+  (* Look up the article. *)
   extant_articles <-
     queryL (SELECT article.Title, commit.Content
              FROM article LEFT JOIN commit ON article.Head = commit.Id
@@ -65,7 +80,12 @@ fun wiki requested_article_title =
                              ‘{[requested_article_title]}’
                            </xml>
   in
+    (* Stuff the article text in a source so we can live-update it as the user
+    edits. *)
     article_body_source <- source article.Body;
+    (* Initially, we're in View mode, and we can switch to Edit mode on user
+    request. *)
+    page_mode <- source View;
     return
       <xml>
         <head>
@@ -74,24 +94,40 @@ fun wiki requested_article_title =
               then Configuration.wiki_title
               else article.Title ^ " – " ^ Configuration.wiki_title]}
           </title>
+          <link rel="stylesheet" href="/urwiki.css" />
         </head>
         <body>
-          <h1>{[Configuration.wiki_title]}</h1>
-          <ul>
-            <li>
-              <a link={wiki Configuration.main_page_name}>
-                {[Configuration.main_page_name]}
-              </a>
-            </li>
-          </ul>
+          (* Page headings *)
+          <div>
+            <h1>{[Configuration.wiki_title]}</h1>
+            <ul>
+              <li>
+                <a link={wiki Configuration.main_page_name}>
+                  {[Configuration.main_page_name]}
+                </a>
+              </li>
+            </ul>
+          </div>
+          (* Article *)
           <dyn signal={text <- signal article_body_source;
                        return <xml>{[text]}</xml>} /><br />
-          <ctextarea source={article_body_source} /><br />
-          <button
-             value="Commit"
-             onclick={fn _ =>
-                        text <- get article_body_source;
-                        rpc (commit_article article.Title text)} />
+          (* Editing panel *)
+          <div>
+            (* Controls for View mode *)
+            <div dynClass={only_in page_mode View}>
+              <button value="Edit" onclick={fn _ => set page_mode Edit} />
+            </div>
+            (* Controls for Edit mode *)
+            <div dynClass={only_in page_mode Edit}>
+              <ctextarea source={article_body_source} /><br />
+              <button
+                 value="Commit"
+                 onclick={fn _ =>
+                            text <- get article_body_source;
+                            rpc (commit_article article.Title text);
+                            set page_mode View} />
+            </div>
+          </div>
         </body>
       </xml>
   end
